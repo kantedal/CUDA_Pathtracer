@@ -16,7 +16,7 @@ struct Sphere {
 
     __device__ bool RayIntersection(Ray ray, float3 &collision_pos, float3 &collision_normal) {
 		float3 op = position - ray.start_position;
-		float t, epsilon = 0.000001f;
+		float t, epsilon = 0.0001f;
 		float b = dot(op, ray.direction);
 		float disc = b*b - dot(op, op) + radius * radius;
 		if (disc<0) return false;
@@ -24,12 +24,11 @@ struct Sphere {
 
 		t = (t = b - disc)>epsilon ? t : ((t = b + disc)>epsilon ? t : 0);
 
-        if (t < 0.1)
+        if (t < 0.01)
             return false;
 
 		collision_pos = ray.start_position + ray.direction * t;
-		float3 normal = normalize(collision_pos - position);
-		collision_normal =  dot(normal, ray.direction) < 0 ? normal : normal * -1;
+        collision_normal = normalize(collision_pos - position);
 
 		return true;
     }

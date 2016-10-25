@@ -40,15 +40,12 @@ uint WangHash(uint a) {
 __device__ bool RayIntersection(
         Ray ray, Triangle* triangles, int triangle_count,
         Sphere* spheres, int sphere_count, Material* materials,
-        float3 &collision_pos, float3 &collision_normal, Material &collision_material
+        float3 &collision_pos, float3 &collision_normal, int &material_index
 ) {
 
     for (int sphere_idx = 0; sphere_idx < sphere_count; sphere_idx++) {
         if (spheres[sphere_idx].RayIntersection(ray, collision_pos, collision_normal)) {
-            //collision_normal = normalize(collision_pos - spheres[sphere_idx].position);
-            collision_material = materials[4];
-            //printf("%.2f %.2f %.2f \n", collision_pos.x, collision_pos.y, collision_pos.z);
-            //printf("%.2f %.2f %.2f \n", collision_normal.x, collision_normal.y, collision_normal.z);
+            material_index = 5;
             return true;
         }
     }
@@ -56,7 +53,7 @@ __device__ bool RayIntersection(
     for (int tri_idx = 0; tri_idx < triangle_count; tri_idx++) {
         if (triangles[tri_idx].TriangleRayIntersection(ray, collision_pos)) {
             collision_normal = triangles[tri_idx].normal;
-            collision_material = materials[triangles[tri_idx].material_idx];
+            material_index = triangles[tri_idx].material_idx;
             return true;
         }
     }
@@ -64,32 +61,31 @@ __device__ bool RayIntersection(
 }
 
 __device__ float3 PathTrace(Ray ray, Triangle* triangles, int triangle_count, Sphere* spheres, int sphere_count, Material* materials, curandState *randState) {
-
     float3 mask = make_float3(1,1,1);
     float3 accumulated_color = make_float3(0,0,0);
 
     for (int iteration = 0; iteration < 5; iteration++) {
-        float3 collision_normal = make_float3(0,0,0);
-        float3 collision_pos = make_float3(0,0,0);
-        float3 reflected_dir = make_float3(0,0,0);
-        float3 transmitted_dir = make_float3(0,0,0);
-        Material collision_material;
+        float3 collision_normal, collision_pos, next_dir = make_float3(0,0,0);
+        float distribution = 1.0f;
+        int material_index = 0;
 
-        // First chack so that ray intersects scene
-        if (!RayIntersection(ray, triangles, triangle_count, spheres, sphere_count, materials, collision_pos, collision_normal, collision_material))
+
+        if (!RayIntersection(ray, triangles, triangle_count, spheres, sphere_count, materials, collision_pos, collision_normal, material_index))
             return make_float3(0,0,0);
 
-        mask *= collision_material.BRDF(ray.direction, collision_normal);
+
+        Material collision_material = materials[material_index];
+        mask *= collision_material.BRDF(ray.direction, collision_normal) * distribution;
 
         if (collision_material.type == EMISSION) {
             accumulated_color += (mask * collision_material.color * collision_material.emission_rate);
             break;
         }
 
-        collision_material.PDF(randState, ray.direction, collision_normal, reflected_dir, transmitted_dir);
+        collision_material.PDF(randState, ray.direction, collision_normal, next_dir, distribution);
 
-        if (!isZero(reflected_dir)) {
-            ray = Ray(collision_pos + reflected_dir * 0.01f, reflected_dir);
+        if (!isZero(next_dir)) {
+            ray = Ray(collision_pos + next_dir * 0.01f, next_dir);
         }
         else {
             break;
@@ -100,7 +96,7 @@ __device__ float3 PathTrace(Ray ray, Triangle* triangles, int triangle_count, Sp
 }
 
 __global__ void render_kernel(
-        float3* d_pixels, float3* d_accumulated,
+        float3* d_pixels, float3* d_clr_pixels, float3* d_accumulated,
         Triangle* triangles, int triangle_count,
         Sphere* spheres, int sphere_count,
         Material* materials, int material_count,
@@ -113,31 +109,72 @@ __global__ void render_kernel(
 
     if (frame == 1) {
         d_accumulated[i] = make_float3(0, 0, 0);
+
+        // Calculate first collision dat
+        float3 collision_pos, collision_normal = make_float3(0,0,0);
+        int material_index;
+
+//        if (RayIntersection(ray, triangles, triangle_count, spheres, sphere_count, materials, collision_pos, collision_normal, material_index)) {
+//            d_firstCollision[2 * i] = make_float4(0,0,0,0);
+//            d_firstCollision[2 * i].x = collision_pos.x;
+//            d_firstCollision[2 * i].y = collision_pos.y;
+//            d_firstCollision[2 * i].z = collision_pos.z;
+//            d_firstCollision[2 * i].w = material_index;
+//
+//            d_firstCollision[2 * i + 1] = make_float4(0,0,0,0);
+//            d_firstCollision[2 * i + 1].x = collision_normal.x;
+//            d_firstCollision[2 * i + 1].y = collision_normal.y;
+//            d_firstCollision[2 * i + 1].z = collision_normal.z;
+//        }
     }
 
     curandState randState;
     int threadId = (blockIdx.x + blockIdx.y * gridDim.x) * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
     curand_init(hash_frame + threadId, 0, 0, &randState);
 
-    Ray ray = Ray(camera.position, camera.GetRayDirection(make_float2(x, y)));
-    d_accumulated[i] += PathTrace(ray, triangles, triangle_count, spheres, sphere_count, materials, &randState);
+    float3 new_clr = make_float3(0,0,0);
+    float3* positions = camera.GetRayDirections(make_float2(x,y), &randState);
+    for (int sample = 0; sample < 4; sample++) {
+        //printf("%.2f \n", positions[sample].x);
+        Ray ray = Ray(camera.position, positions[sample]);
+        new_clr += PathTrace(ray, triangles, triangle_count, spheres, sphere_count, materials, &randState);
+    }
+    new_clr /= 4.0f;
+
+    // First ray from camera
+    //Ray ray = Ray(camera.position, camera.GetRayDirection(make_float2(x, y)));
+
+    d_accumulated[i] += new_clr; //PathTrace(ray, triangles, triangle_count, spheres, sphere_count, materials, &randState);
     float3 temp_clr = d_accumulated[i] / frame;
 
     float3 clr = make_float3(clamp(temp_clr.x, 0.0f, 1.0f), clamp(temp_clr.y, 0.0f, 1.0f), clamp(temp_clr.z, 0.0f, 1.0f));
 
-	Colour fcolour;
+    Colour fcolour;
     fcolour.components = make_uchar4(
             (unsigned char)(powf(clr.x, 1 / 2.2f) * 255),
             (unsigned char)(powf(clr.y, 1 / 2.2f) * 255),
             (unsigned char)(powf(clr.z, 1 / 2.2f) * 255), 1);
 
     d_pixels[i] = make_float3(x, y, fcolour.c);
+    d_clr_pixels[i] = make_float3(clr.x, clr.y, clr.z);
+
 }
 
-void launch_kernel_render(float3* pixels, float3* accumulated_buffer, Triangle* triangles, int triangle_count, Sphere* spheres, int sphere_count, Material* materials, int material_count, Camera* camera) {
+void launch_kernel_render(
+        float3* pixels,
+        float3* clrPixels,
+        float3* accumulated_buffer,
+        Triangle* triangles,
+        int triangle_count,
+        Sphere* spheres,
+        int sphere_count,
+        Material* materials,
+        int material_count,
+        Camera* camera
+) {
     dim3 block(32, 32, 1);
     dim3 grid(512 / block.x, 512 / block.y, 1);
-    render_kernel<<<grid, block>>>(pixels, accumulated_buffer, triangles, triangle_count, spheres, sphere_count, materials, material_count, *camera, frame, WangHash(frame), 512, 512);
+    render_kernel<<<grid, block>>>(pixels, clrPixels, accumulated_buffer, triangles, triangle_count, spheres, sphere_count, materials, material_count, *camera, frame, WangHash(frame), 512, 512);
 
     g_time += 0.01;
     frame++;

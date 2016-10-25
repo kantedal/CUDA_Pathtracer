@@ -9,10 +9,14 @@ struct Triangle {
     float3 v0;
     float3 v1;
     float3 v2;
+    float3 edge1;
+    float3 edge2;
     float3 normal;
     int material_idx;
 
     Triangle(float3 _v0, float3 _v1, float3 _v2): v0(_v0), v1(_v1), v2(_v2) {
+        edge1 = v1 - v0;
+        edge2 = v2 - v0;
         CalculateNormal();
     };
     Triangle(): v0(make_float3(0,0,0)), v1(make_float3(0,0,0)), v2(make_float3(0,0,0)) {};
@@ -26,9 +30,6 @@ struct Triangle {
 
     __device__ bool TriangleRayIntersection(Ray ray, float3 &collision_pos) {
         float EPS = 0.0001;
-
-        float3 edge1 = v1 - v0;
-        float3 edge2 = v2 - v0;
 
         //Begin calculating determinant - also used to calculate u parameter
         float3 P = cross(ray.direction, edge2);

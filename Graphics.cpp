@@ -6,11 +6,15 @@
 #include <iostream>
 #include "Graphics.h"
 #include "kernels/RenderKernel.h"
+#include "kernels/cutil_math.h"
 
 GLuint vbo;
 float3* pixels;
+float3* clrPixels;
+float3* h_clrPixels = new float3[window_height*window_height];
+bool cancel = false;
 
-void RenderSample(float3* pixels);
+void RenderSample(float3* pixels, float3* clr_pixels);
 
 Graphics::Graphics(int *argc, char **argv) {
     if (!InitGL(argc, argv)) return;
@@ -18,6 +22,8 @@ Graphics::Graphics(int *argc, char **argv) {
 }
 
 bool Graphics::InitGL(int *argc, char **argv) {
+    cudaMalloc(&clrPixels, window_width * window_height * sizeof(float3));
+
     glutInit(argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowPosition(100, 100);
@@ -63,7 +69,7 @@ void display() {
     cudaGLMapBufferObject((void**)&pixels, vbo);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    RenderSample(pixels);
+    RenderSample(pixels, clrPixels);
 
     cudaThreadSynchronize();
     cudaGLUnmapBufferObject(vbo);
@@ -77,14 +83,28 @@ void display() {
     glDisableClientState(GL_VERTEX_ARRAY);
     glutSwapBuffers();
 
-    glutPostRedisplay();
+    if (!cancel)
+        glutPostRedisplay();
 }
+
+inline int toInt(float x){ return int(pow(clamp(x), 1 / 2.2) * 255 + .5); }
 
 void keyboard(unsigned char key, int /*x*/, int /*y*/)
 {
     switch (key)
     {
-        case (27) :
+        case (27):
+            cancel = true;
+            cudaMemcpy(h_clrPixels, clrPixels, window_width * window_height * sizeof(float3), cudaMemcpyDeviceToHost);
+            cudaFree(pixels);
+
+            FILE *f = fopen("render.ppm", "w");
+            fprintf(f, "P3\n%d %d\n%d\n", window_width, window_height, 255);
+            for (int i = 0; i < window_width * window_height; i++) {
+                fprintf(f, "%d %d %d ", toInt(h_clrPixels[i].x), toInt(h_clrPixels[i].y), toInt(h_clrPixels[i].z));
+            }
+
+            printf("Saved image to 'render.ppm'\n");
             exit(0);
     }
 }

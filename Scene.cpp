@@ -15,14 +15,16 @@ void Scene::CreateDefaultScene() {
     Material* diffuse_blue_material = new Material(DIFFUSE, make_float3(0,0,1));
     Material* diffuse_white_material = new Material(DIFFUSE, make_float3(1,1,1));
     Material* specular_white_material = new Material(SPECULAR, make_float3(1,1,1));
-    Material* emission_material = new Material(EMISSION, make_float3(0.8,0.8,1));
-    emission_material->emission_rate = 100.0f;
+    Material* transmission_white_material = new Material(TRANSMISSION, make_float3(1,1,1));
+    Material* emission_material = new Material(EMISSION, make_float3(0.6,0.8,1));
+    emission_material->emission_rate = 40.0f;
 
     materials.push_back(diffuse_red_material);
     materials.push_back(diffuse_green_material);
     materials.push_back(diffuse_blue_material);
     materials.push_back(diffuse_white_material);
     materials.push_back(specular_white_material);
+    materials.push_back(transmission_white_material);
     materials.push_back(emission_material);
 
     Object3d light_plane = Object3d::loadObj("../models/light_plane.obj", emission_material);
@@ -37,8 +39,8 @@ void Scene::CreateDefaultScene() {
     objects.push_back(left_wall);
     objects.push_back(right_wall);
 
-    Sphere sphere1 = Sphere(make_float3(5, -4, -2.5), 2.0f);
-    Sphere sphere2 = Sphere(make_float3(10, 1.5, -2), 2.5f);
+    Sphere sphere1 = Sphere(make_float3(5, -3.5, -2.5f), 2.0f);
+    Sphere sphere2 = Sphere(make_float3(8, 1.5, -2.5f), 2.0f);
 
     spheres.push_back(sphere1);
     spheres.push_back(sphere2);
