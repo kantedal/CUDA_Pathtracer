@@ -5,13 +5,13 @@
       <sourceFolder url="file://$MODULE_DIR$/Graphics.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Object3d.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/main.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/kernels/Camera.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/kernels/Ray.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/kernels/Triangle.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/kernels/Material.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/kernels/RenderKernel.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/kernels/Sphere2.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/kernels/RenderKernel.cu" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/kernels/Triangle.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/kernels/Camera.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Scene.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/RenderDriver.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Graphics.cpp" isTestSource="false" />
