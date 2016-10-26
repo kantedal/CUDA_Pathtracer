@@ -18,6 +18,7 @@ public:
     Camera* get_camera() { return camera; }
 
     Triangle* GenerateTriangleArray(int &triangle_count);
+    float* GenerateTriangles(int &triangle_count);
     Material* GenerateMaterialArray(int &material_count);
     Sphere* GenerateSphereArray(int &sphere_count);
 private:

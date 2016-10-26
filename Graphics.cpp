@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <iostream>
 #include "Graphics.h"
-#include "kernels/RenderKernel.h"
 #include "kernels/cutil_math.h"
 
 GLuint vbo;

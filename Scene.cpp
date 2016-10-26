@@ -79,7 +79,7 @@ Triangle* Scene::GenerateTriangleArray(int &triangle_size) {
             float3 v2 = make_float3(objects.at(obj_idx).get_triangles().at(tri_idx).v2.x, objects.at(obj_idx).get_triangles().at(tri_idx).v2.y, objects.at(obj_idx).get_triangles().at(tri_idx).v2.z);
 
             Triangle new_tri = Triangle(v0, v1, v2);
-            new_tri.material_idx = material_index;
+            new_tri.material_index = material_index;
 
             allTris.push_back(new_tri);
             triangle_size++;
@@ -105,6 +105,45 @@ Sphere* Scene::GenerateSphereArray(int &sphere_count) {
     }
 
     return new_spheres;
+}
+
+float* Scene::GenerateTriangles(int &triangle_count) {
+    float *triangles_p;
+    std::vector<float4> all_triangles;
+
+    for (unsigned int obj_idx = 0; obj_idx < objects.size(); obj_idx++) {
+        int material_index = 0;
+        for (int mat_idx = 0; mat_idx < materials.size(); mat_idx++) {
+            if (materials.at(mat_idx) == objects.at(obj_idx).get_material()) {
+                material_index = mat_idx;
+                break;
+            }
+        }
+
+        for (unsigned int tri_idx = 0; tri_idx < objects.at(obj_idx).get_triangles().size(); tri_idx++) {
+            Triangle triangle = objects.at(obj_idx).get_triangles().at(tri_idx);
+            float4 v0 = make_float4(triangle.v0.x, triangle.v0.y, triangle.v0.z, 0);
+            float4 edge1 = make_float4(triangle.v1.x - triangle.v0.x, triangle.v1.y - triangle.v0.y, triangle.v1.z - triangle.v0.z, 0);
+            float4 edge2 = make_float4(triangle.v2.x - triangle.v0.x, triangle.v2.y - triangle.v0.y, triangle.v2.z - triangle.v0.z, 0);
+            float4 material = make_float4(material_index, 0,0,0);
+
+            all_triangles.push_back(v0);
+            all_triangles.push_back(edge1);
+            all_triangles.push_back(edge2);
+            all_triangles.push_back(material);
+        }
+    }
+
+    size_t triangle_size = all_triangles.size() * sizeof(float4);
+    triangle_count = (int) all_triangles.size() / 4;
+
+    if (triangle_size > 0)
+    {
+        cudaMalloc((void **)&triangles_p, triangle_size);
+        cudaMemcpy(triangles_p, &all_triangles[0], triangle_size, cudaMemcpyHostToDevice);
+    }
+
+    return triangles_p;
 }
 
 

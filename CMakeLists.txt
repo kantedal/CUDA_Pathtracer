@@ -35,6 +35,7 @@ set(SOURCES
         RenderDriver.cpp
         main.cpp
         kernels/RenderKernel.cu
+        kernels/Triangle.h
         )
 
 set(CMAKE_BINARY_DIR   ${CMAKE_SOURCE_DIR}/bin)

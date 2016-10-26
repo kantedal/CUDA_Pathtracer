@@ -1,7 +1,7 @@
 #ifndef RAYTRACER_CUDA_MATERIAL_H
 #define RAYTRACER_CUDA_MATERIAL_H
 
-#include <device_launch_parameters.h>
+
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
 #include "cutil_math.h"
